@@ -1,7 +1,10 @@
+
 document.addEventListener("DOMContentLoaded", function () {
     const chat = document.querySelector(".chat");
     const textarea = document.querySelector("textarea");
     const button = document.querySelector("button");
+
+    const API_URL = "https://ai-support-web-0rpr.onrender.com/chat";
 
     let sending = false;
 
@@ -39,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {
         chat.scrollTop = chat.scrollHeight;
     }
 
-    // Odešle otázku do Flask backendu
+    // Odešle zprávu na Render backend
     async function sendMessage() {
         const text = textarea.value.trim();
 
@@ -54,19 +57,16 @@ document.addEventListener("DOMContentLoaded", function () {
         textarea.value = "";
 
         try {
-            const response = await fetch(
-                "http://127.0.0.1:8000/chat",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: text,
-                        student: "student"
-                    })
-                }
-            );
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: text,
+                    student: "student"
+                })
+            });
 
             const data = await response.json();
 
@@ -76,15 +76,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
             }
 
-            // Zobrazí odpověď, kterou vrátil Flask
             addMessage(data.reply, true);
 
         } catch (error) {
-            console.error("Chyba:", error);
+            console.error("Chyba komunikace s backendem:", error);
 
             addMessage(
-                "Nepodařilo se spojit s backendem. " +
-                "Zkontroluj, zda stále běží Flask.",
+                "Nepodařilo se získat odpověď ze serveru. " +
+                "Zkus to prosím znovu.",
                 true
             );
         } finally {
