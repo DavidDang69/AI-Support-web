@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const textarea = document.querySelector("textarea");
     const button = document.querySelector("button");
 
-    const API_URL = "https://ai-support-web-0rpr.onrender.com/chat";
+    const API_URL = "/chat";    
 
     let sending = false;
 
