@@ -1,14 +1,24 @@
 
 document.addEventListener("DOMContentLoaded", function () {
+    // Přepínač: true = backend, false = demo bez backendu
+    const USE_BACKEND = true;
+
+    // Adresa tvého vlastního backendu na Renderu
+    const BACKEND_URL = "https://ai-support-web-0rpr.onrender.com/chat";
+
+    // Doplň své studentské ID, pokud ho učitel vyžaduje
+    const STUDENT_ID = "Dang_David_4ITE";
+
     const chat = document.querySelector(".chat");
     const textarea = document.querySelector("textarea");
     const button = document.querySelector("button");
 
-    const API_URL = "/chat";    
+    // E-mail je volitelný; tvoje současné HTML ho nemusí obsahovat
+    const emailInput = document.querySelector("#email");
 
     let sending = false;
 
-    // Přidá zprávu do chatu
+    // Přidá zprávu do chatu a vrátí její textovou bublinu
     function addMessage(text, isAI) {
         const message = document.createElement("div");
         message.classList.add(
@@ -40,13 +50,15 @@ document.addEventListener("DOMContentLoaded", function () {
         chat.appendChild(message);
 
         chat.scrollTop = chat.scrollHeight;
+
+        return bubble;
     }
 
-    // Odešle zprávu na Render backend
+    // Odešle otázku na backend
     async function sendMessage() {
         const text = textarea.value.trim();
 
-        if (text === "" || sending) {
+        if (!text || sending) {
             return;
         }
 
@@ -56,45 +68,78 @@ document.addEventListener("DOMContentLoaded", function () {
         addMessage(text, false);
         textarea.value = "";
 
+        // Zatím zobrazíme stav zpracování
+        const answerBubble = addMessage(
+            "Zpracovávám dotaz…",
+            true
+        );
+
         try {
-            const response = await fetch(API_URL, {
+            const payload = {
+                message: text,
+                student: STUDENT_ID,
+                email: emailInput
+                    ? emailInput.value.trim() || null
+                    : null
+            };
+
+            // DEMO režim bez backendu
+            if (!USE_BACKEND) {
+                answerBubble.textContent =
+                    "Demo odpověď (bez serveru)\n\n" +
+                    "Student: " + payload.student + "\n" +
+                    "Dotaz: " + payload.message;
+
+                return;
+            }
+
+            // Odeslání dotazu na backend
+            const response = await fetch(BACKEND_URL, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    message: text,
-                    student: "student"
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(
-                    data.error || "Chyba backendu."
-                );
+                answerBubble.textContent = data.error
+                    ? "Chyba serveru: " + data.error
+                    : "Server vrátil chybu: " + response.status;
+
+                return;
             }
 
-            addMessage(data.reply, true);
+            // Zobrazení odpovědi serveru
+            if (data.reply) {
+                answerBubble.textContent = data.reply;
+            } else if (data.error) {
+                answerBubble.textContent =
+                    "Chyba serveru: " + data.error;
+            } else {
+                answerBubble.textContent =
+                    "Server nevrátil žádnou odpověď.";
+            }
 
         } catch (error) {
-            console.error("Chyba komunikace s backendem:", error);
+            console.error("Chyba komunikace:", error);
 
-            addMessage(
-                "Nepodařilo se získat odpověď ze serveru. " +
-                "Zkus to prosím znovu.",
-                true
-            );
+            answerBubble.textContent =
+                "Nepodařilo se spojit se serverem.";
         } finally {
             sending = false;
             button.disabled = false;
             textarea.focus();
+            chat.scrollTop = chat.scrollHeight;
         }
     }
 
+    // Kliknutí na tlačítko odešle zprávu
     button.addEventListener("click", sendMessage);
 
+    // Enter odešle zprávu, Shift + Enter vytvoří nový řádek
     textarea.addEventListener("keydown", function (event) {
         if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
